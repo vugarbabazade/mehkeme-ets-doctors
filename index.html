@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="az">
 <head>
@@ -23,7 +24,9 @@ header { position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,.95)
 .header-inner { max-width: 1180px; margin: 0 auto; padding: 18px 20px; }
 h1 { margin: 0 0 8px; font-size: 24px; }
 .meta { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; }
-.controls { max-width: 1180px; margin: 16px auto 0; padding: 0 20px 18px; display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; }
+.controls { max-width: 1180px; margin: 16px auto 0; padding: 0 20px 18px; display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 10px; align-items: center; }
+.instant-toggle { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; color: var(--text); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.instant-toggle input { width: 16px; height: 16px; }
 input[type="search"], select { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; font-size: 14px; background: #fff; }
 button { border: 0; border-radius: 10px; padding: 11px 14px; font-weight: 700; cursor: pointer; background: var(--accent); color: white; }
 button.secondary { background: #101828; }
@@ -83,6 +86,10 @@ main { max-width: 1180px; margin: 20px auto 60px; padding: 0 20px; }
       <option value="Məhkəmə təbabəti - MPF, HTF AZ.pdf">MPF, HTF AZ</option>
       <option value="Məhkəmə Təbabəti yaz sem_ 2025(Doctors' Team).pdf">Doctors Team 2025</option>
     </select>
+    <label class="instant-toggle" title="Aktiv olduqda cavabı seçən kimi düzgün cavab göstərilir">
+      <input type="checkbox" id="instantMode">
+      Seçən kimi göstər
+    </label>
     <button onclick="checkAnswers()">Cavabları yoxla</button>
     <button class="ghost" onclick="toggleAnswers()">Cavabları göstər/gizlət</button>
     <button class="secondary" onclick="resetQuiz()">Sıfırla</button>
@@ -9848,6 +9855,7 @@ main { max-width: 1180px; margin: 20px auto 60px; padding: 0 20px; }
 const cards = Array.from(document.querySelectorAll('.question-card'));
 const search = document.getElementById('search');
 const sourceFilter = document.getElementById('sourceFilter');
+const instantMode = document.getElementById('instantMode');
 let answersVisible = false;
 
 function applyFilters() {
@@ -9866,42 +9874,73 @@ function applyFilters() {
 search.addEventListener('input', applyFilters);
 sourceFilter.addEventListener('change', applyFilters);
 
-function checkAnswers() {
+function evaluateCard(card, revealAnswer = true) {
+  const selected = card.querySelector('input[type="radio"]:checked');
+  const result = card.querySelector('.result');
+  const answerBox = card.querySelector('.answer');
+
+  card.querySelectorAll('.option').forEach(opt => opt.classList.remove('correct','wrong'));
+  result.textContent = '';
+  result.className = 'result';
+
+  if (!selected) {
+    if (!answersVisible) answerBox.classList.remove('show');
+    return null;
+  }
+
+  const chosen = selected.value;
+  const correctLetter = card.dataset.correct;
+  const selectedOption = selected.closest('.option');
+  const correctOption = card.querySelector(`.option[data-letter="${correctLetter}"]`);
+  const isCorrect = chosen === correctLetter;
+
+  if (isCorrect) {
+    selectedOption.classList.add('correct');
+    result.textContent = 'Düzgündür ✅';
+    result.classList.add('ok');
+  } else {
+    selectedOption.classList.add('wrong');
+    if (correctOption) correctOption.classList.add('correct');
+    result.textContent = 'Səhvdir ❌';
+    result.classList.add('bad');
+  }
+
+  if (revealAnswer || answersVisible) {
+    answerBox.classList.add('show');
+  }
+
+  return isCorrect;
+}
+
+function updateStats() {
   let answered = 0, correct = 0, wrong = 0;
   cards.forEach(card => {
     const selected = card.querySelector('input[type="radio"]:checked');
-    const result = card.querySelector('.result');
-    const answerBox = card.querySelector('.answer');
-    card.querySelectorAll('.option').forEach(opt => opt.classList.remove('correct','wrong'));
-    result.textContent = '';
-    result.className = 'result';
-    if (!selected) {
-      if (answersVisible) answerBox.classList.add('show');
-      return;
-    }
+    if (!selected) return;
     answered++;
-    const chosen = selected.value;
-    const correctLetter = card.dataset.correct;
-    const selectedOption = selected.closest('.option');
-    const correctOption = card.querySelector(`.option[data-letter="${correctLetter}"]`);
-    if (chosen === correctLetter) {
-      correct++;
-      selectedOption.classList.add('correct');
-      result.textContent = 'Düzgündür ✅';
-      result.classList.add('ok');
-    } else {
-      wrong++;
-      selectedOption.classList.add('wrong');
-      if (correctOption) correctOption.classList.add('correct');
-      result.textContent = 'Səhvdir ❌';
-      result.classList.add('bad');
-    }
-    answerBox.classList.add('show');
+    if (selected.value === card.dataset.correct) correct++;
+    else wrong++;
   });
   document.getElementById('answeredCount').textContent = answered;
   document.getElementById('correctCount').textContent = correct;
   document.getElementById('wrongCount').textContent = wrong;
 }
+
+function checkAnswers() {
+  cards.forEach(card => evaluateCard(card, true));
+  updateStats();
+}
+
+// İstəyə görə: aktiv olanda cavab seçilən kimi həmin sualda düzgün/səhv və doğru cavab görünür.
+document.querySelectorAll('input[type="radio"]').forEach(input => {
+  input.addEventListener('change', () => {
+    const card = input.closest('.question-card');
+    if (instantMode.checked) {
+      evaluateCard(card, true);
+    }
+    updateStats();
+  });
+});
 
 function toggleAnswers() {
   answersVisible = !answersVisible;
