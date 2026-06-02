@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vugun_quizleri</title>
+  <title>Məhkəmə Təbabəti — All Questions Quiz</title>
   <style>
 :root {
   --bg: #f5f7fb;
@@ -9987,7 +9987,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 let questionsData = [];
 let answersVisible = false;
 let sourcesVisible = false;
@@ -10073,6 +10073,10 @@ function buildSourceBadges(q) {
 
 function renderQuestions() {
   questionContainer.innerHTML = questionsData.map((q, idx) => {
+    // Sərt qoruma: ekranda heç vaxt 5-dən artıq variant göstərmə.
+    // Excel import zamanı variantlar yalnız C-G sütunlarından gəlməlidir.
+    q.options = (q.options || []).slice(0, 5);
+    if (!q.options.some(o => o.id === q.correctId)) q.correctId = q.options[0]?.id || 'A';
     const qNo = q.no || idx + 1;
     const correct = getCorrectOption(q);
     const correctDisplay = displayedLetterFor(q, correct.id);
@@ -10259,9 +10263,9 @@ function toggleMobilePanel() {
 
 function parseCorrectValue(value, options) {
   const raw = cleanText(value);
-  const firstLetter = raw.match(/\b([A-H])\b/i) || raw.match(/^([A-H])\)/i) || raw.match(/^([A-H])\s*[-.]/i);
+  const firstLetter = raw.match(/\b([A-E])\b/i) || raw.match(/^([A-E])\)/i) || raw.match(/^([A-E])\s*[-.]/i);
   if (firstLetter) return firstLetter[1].toUpperCase();
-  const norm = normalizeKey(raw.replace(/^[A-H]\)\s*/i, ''));
+  const norm = normalizeKey(raw.replace(/^[A-E]\)\s*/i, ''));
   const byText = options.find(o => normalizeKey(o.text) === norm || normalizeKey(o.text).includes(norm) || norm.includes(normalizeKey(o.text)));
   return byText ? byText.id : (options[0]?.id || 'A');
 }
@@ -10285,48 +10289,79 @@ function parseCSV(text) {
 
 function rowsToQuestions(rows) {
   if (!rows.length) return [];
-  const headerNorm = rows[0].map(normalizeKey);
-  const hasHeader = headerNorm.some(h => ['sual','question','sual metni','correct','duzgun cavab','cavab'].includes(h) || h.includes('variant'));
-  const dataRows = hasHeader ? rows.slice(1) : rows;
-  const findCol = candidates => {
-    const normCandidates = candidates.map(normalizeKey);
-    return headerNorm.findIndex(h => normCandidates.includes(h) || normCandidates.some(c => h.includes(c)));
-  };
-  const idx = hasHeader ? {
-    no: findCol(['no','sual no','sual nomresi','question no','#','id','pdf no']),
-    question: findCol(['sual','question','sual metni','sual serti','qtext']),
-    correct: findCol(['correct','answer','cavab','duzgun cavab','duzgun variant','reference answer']),
-    source: findCol(['source','menbe','pdf','file','fayl']),
-    page: findCol(['page','sehife','sehife no']),
-    confidence: findCol(['confidence','inam','etibar'])
-  } : { no:0, question:1, correct:7, source:8, page:9, confidence:10 };
-  const optIdx = LETTERS.slice(0, 8).map((letter, i) => hasHeader ? findCol([letter, `${letter})`, `variant ${letter}`, `option ${letter}`, `${letter} variant`]) : i + 2);
+
+  // SƏRT EXCEL QAYDASI:
+  // A = sual nömrəsi
+  // B = sual mətni
+  // C, D, E, F, G = YALNIZ cavab variantları
+  // H = düzgün cavab
+  // I və sonrakı sütunlar TAMAMİLƏ nəzərə alınmır və heç vaxt variant kimi göstərilmir.
+  const cleanRows = rows
+    .map(r => Array.isArray(r) ? r.slice(0, 8) : [])
+    .filter(r => r.some(c => cleanText(c)));
+
+  if (!cleanRows.length) return [];
+
+  const headerNorm = cleanRows[0].map(normalizeKey);
+  const looksLikeHeader = headerNorm.some(h => [
+    'no','nomre','sual nomresi','sual','question','sual metni','sual serti',
+    'a','b','c','d','e','variant','duzgun cavab','correct','answer'
+  ].includes(h) || h.includes('variant'));
+
+  const dataRows = looksLikeHeader ? cleanRows.slice(1) : cleanRows;
 
   return dataRows.map((r, rowIndex) => {
-    const get = i => i >= 0 && i < r.length ? cleanText(r[i]) : '';
-    const options = optIdx.map((col, i) => ({ id: LETTERS[i], text: get(col) })).filter(o => o.text);
-    const question = get(idx.question >= 0 ? idx.question : (hasHeader ? 0 : 1));
+    const no = cleanText(r[0]);
+    const question = cleanText(r[1]);
+
+    // Burada yalnız C-G sütunları oxunur: indeks 2,3,4,5,6.
+    // H sütunu indeks 7-dir və yalnız düzgün cavab üçündür.
+    const options = [2, 3, 4, 5, 6]
+      .map((col, i) => ({ id: LETTERS[i], text: cleanText(r[col]) }))
+      .filter(o => o.text);
+
     if (!question || options.length < 2) return null;
+
+    const correctRaw = cleanText(r[7]);
     const q = {
-      no: get(idx.no) || rowIndex + 1,
+      no: no || rowIndex + 1,
       question,
-      source: get(idx.source),
-      page: get(idx.page),
+      source: '',
+      page: '',
       pdfNo: '',
-      confidence: get(idx.confidence),
+      confidence: '',
       options,
-      correctId: parseCorrectValue(get(idx.correct), options)
+      correctId: parseCorrectValue(correctRaw, options)
     };
+
     const saved = localStorage.getItem(correctionStorageKey(q));
     if (saved && q.options.some(o => o.id === saved)) q.correctId = saved;
     return q;
   }).filter(Boolean);
 }
 
+
+function worksheetToStrictRows(sheet) {
+  // XLSX üçün ən sərt oxuma rejimi: hər sətrdən yalnız A-H hüceyrələri götürülür.
+  // Variantlar sonradan yalnız C-G olacaq; H yalnız düzgün cavab olacaq.
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:H1');
+  const rows = [];
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row = [];
+    for (let c = 0; c < 8; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = sheet[addr];
+      row.push(cell ? (cell.w ?? cell.v ?? '') : '');
+    }
+    if (row.some(v => cleanText(v))) rows.push(row);
+  }
+  return rows;
+}
+
 function handleExcelRows(rows, filename) {
   const parsed = rowsToQuestions(rows);
   if (!parsed.length) {
-    excelStatus.textContent = 'Fayl oxundu, amma sual formatı tanınmadı. Sütunlar: Sual, A, B, C, D, E, Düzgün cavab formatında olmalıdır.';
+    excelStatus.textContent = 'Fayl oxundu, amma sual formatı tanınmadı. Format belə olmalıdır: A=sual nömrəsi, B=sual, C-G=variantlar, H=düzgün cavab.';
     return;
   }
   questionsData = parsed;
@@ -10334,7 +10369,7 @@ function handleExcelRows(rows, filename) {
   document.getElementById('sheetMeta').textContent = `Source: ${filename}`;
   renderQuestions();
   resetQuiz();
-  excelStatus.textContent = `${filename} yükləndi: ${questionsData.length} sual aktiv bazaya əlavə olundu.`;
+  excelStatus.textContent = `${filename} yükləndi: ${questionsData.length} sual. SƏRT IMPORT aktivdir: variantlar yalnız C-G, düzgün cavab yalnız H, I+ sütunları tam ignor edilir. Versiya: strict-cg-h-v2.`;
 }
 
 excelInput.addEventListener('change', async event => {
@@ -10353,7 +10388,7 @@ excelInput.addEventListener('change', async event => {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      const rows = worksheetToStrictRows(sheet);
       handleExcelRows(rows, file.name);
     }
   } catch (err) {
@@ -10366,6 +10401,8 @@ excelInput.addEventListener('change', async event => {
 
 questionsData = parseInitialQuestions();
 renderQuestions();
+
+// build: strict-cg-h-import-v2-direct-cell-read-2026-06-02
 </script>
 </body>
 </html>
