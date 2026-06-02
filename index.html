@@ -11,12 +11,15 @@
   --accent:#2563eb; --accent2:#1d4ed8; --ok:#16a34a; --bad:#dc2626; --warn:#f59e0b; --soft:#eff6ff;
 }
 * { box-sizing:border-box; }
-html, body { max-width:100%; overflow-x:hidden; }
-body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--text); }
-header { position:sticky; top:0; z-index:10; background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+html, body { max-width:100%; height:100%; overflow:hidden; }
+html { scroll-padding-top:110px; }
+body { margin:0; min-height:100vh; display:flex; flex-direction:column; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--text); }
+header { flex:0 0 auto; position:relative; top:0; z-index:10; background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(16,24,40,.04); }
 .header-inner { max-width:1180px; margin:0 auto; padding:10px 14px 6px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
 h1 { margin:0; font-size:18px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.meta { display:flex; gap:8px; color:var(--muted); font-size:12px; white-space:nowrap; }
+.meta { display:flex; gap:7px; color:var(--muted); font-size:12px; white-space:nowrap; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.meta span { background:#f8fafc; border:1px solid #eef2f7; border-radius:999px; padding:3px 7px; }
+.meta strong { color:var(--text); }
 .controls-wrap { max-width:1180px; margin:0 auto; padding:6px 14px 10px; }
 .controls { display:flex; flex-wrap:wrap; gap:7px; align-items:center; width:100%; }
 .search { flex:1 1 210px; min-width:160px; }
@@ -34,8 +37,8 @@ button.ghost, .file-btn, .toggle { background:#fff; color:var(--text); border:1p
 .file-input { display:none; }
 .upload-status { color:var(--muted); font-size:11px; flex:1 1 140px; min-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mobile-panel-btn { display:none; }
-main { max-width:1180px; margin:14px auto 50px; padding:0 14px; }
-.stats { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:9px; margin-bottom:12px; }
+main { flex:1 1 auto; min-height:0; width:100%; max-width:1180px; margin:0 auto; padding:12px 14px 50px; overflow-y:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; }
+.stats { position:sticky; top:0; z-index:5; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:9px; margin:0 0 12px; padding:0 0 8px; background:linear-gradient(var(--bg) 78%, rgba(245,247,251,0)); }
 .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 10px; }
 .stat .n { font-size:18px; font-weight:900; }
 .stat .label { color:var(--muted); font-size:12px; }
@@ -67,7 +70,7 @@ body.edit-mode .edit-tools { display:flex; }
 @media (max-width:860px) {
   .header-inner { padding:8px 10px 5px; }
   h1 { font-size:16px; }
-  .meta span:nth-child(n+2) { display:none; }
+  .meta span:nth-child(2), .meta span:nth-child(4) { display:none; }
   .controls-wrap { padding:5px 10px 8px; }
   .mobile-panel-btn { display:inline-flex; align-items:center; justify-content:center; }
   .controls.collapsed .hide-mobile { display:none; }
@@ -76,7 +79,7 @@ body.edit-mode .edit-tools { display:flex; }
   .source { flex:1 1 46%; min-width:130px; }
   button, .file-btn, .toggle { min-height:34px; padding:7px 8px; font-size:12px; }
   .upload-status { display:none; }
-  main { margin-top:10px; padding:0 10px; }
+  main { margin-top:0; padding:8px 10px 40px; }
   .stats { grid-template-columns:repeat(4,1fr); gap:6px; }
   .stat { padding:7px 6px; border-radius:10px; }
   .stat .n { font-size:15px; }
@@ -104,7 +107,12 @@ body.edit-mode .edit-tools { display:flex; }
 <header>
   <div class="header-inner">
     <h1>Fizioterapiya — Quiz</h1>
-    <div class="meta"><span>Ümumi sual: <strong id="totalMeta">350</strong></span><span>Excel baza: fizio.xlsx</span></div>
+    <div class="meta">
+      <span>Ümumi: <strong id="totalMeta">350</strong></span>
+      <span>Görünən: <strong id="visibleMeta">350</strong></span>
+      <span>Cari: <strong id="currentMeta">1/350</strong></span>
+      <span>Nəticə: <strong id="scoreMeta">0/0</strong></span>
+    </div>
   </div>
   <div class="controls-wrap">
     <div class="controls collapsed" id="controls">
@@ -124,7 +132,7 @@ body.edit-mode .edit-tools { display:flex; }
     </div>
   </div>
 </header>
-<main>
+<main id="quizScroll" aria-label="Sual siyahısı">
   <div class="stats">
     <div class="stat"><div class="n" id="visibleCount">0</div><div class="label">Görünən</div></div>
     <div class="stat"><div class="n" id="answeredCount">0</div><div class="label">Cavablanmış</div></div>
@@ -140,6 +148,7 @@ let questions = structuredClone(INITIAL_QUESTIONS);
 let filteredIds = new Set();
 let showAllAnswers = false;
 let optionOrder = {};
+let currentQuestionObserver = null;
 const letters = ['A','B','C','D','E'];
 const el = id => document.getElementById(id);
 
@@ -187,11 +196,12 @@ function renderQuestions() {
   const search = el('search').value.trim().toLowerCase();
   const source = el('sourceFilter').value;
   const cards = [];
-  questions.forEach((q, idx) => {
+  questions.forEach((q) => {
     const hay = [q.question, ...letters.map(L => q.options[L]), q.source, q.page].join(' ').toLowerCase();
     if (search && !hay.includes(search)) return;
     if (source && q.source !== source) return;
     filteredIds.add(q.id);
+    const visibleNo = cards.length + 1;
     const order = getOrder(q);
     const opts = order.map(L => `<label class="option" data-letter="${L}">
         <input type="radio" name="q${q.id}" value="${L}">
@@ -200,8 +210,9 @@ function renderQuestions() {
     const editOptions = letters.map(L => `<option value="${L}" ${q.correct===L?'selected':''}>${L}</option>`).join('');
     cards.push(`<section class="question-card" data-id="${q.id}" data-source="${escapeHtml(q.source)}" data-correct="${q.correct}">
       <div class="question-top">
-        <div class="q-title">${idx+1}. ${escapeHtml(q.question)}</div>
+        <div class="q-title">${visibleNo}. ${escapeHtml(q.question)}</div>
         <div class="badges">
+          ${q.excelNo ? `<span class="badge">№: ${escapeHtml(q.excelNo)}</span>` : ''}
           ${q.source ? `<span class="badge">Source: ${escapeHtml(q.source)}</span>` : ''}
           ${q.page ? `<span class="badge">Page: ${escapeHtml(q.page)}</span>` : ''}
         </div>
@@ -218,6 +229,7 @@ function renderQuestions() {
   });
   wrap.innerHTML = cards.join('') || '<div class="empty">Uyğun sual tapılmadı.</div>';
   bindQuestionEvents();
+  setupCurrentQuestionObserver();
   updateStats();
 }
 function bindQuestionEvents() {
@@ -244,6 +256,25 @@ function bindQuestionEvents() {
     });
   });
 }
+function setupCurrentQuestionObserver() {
+  if (currentQuestionObserver) currentQuestionObserver.disconnect();
+  const cards = [...document.querySelectorAll('.question-card')];
+  if (!cards.length) {
+    el('currentMeta').textContent = `0/${questions.length}`;
+    return;
+  }
+  el('currentMeta').textContent = `1/${cards.length}`;
+  currentQuestionObserver = new IntersectionObserver(entries => {
+    const visible = entries
+      .filter(entry => entry.isIntersecting)
+      .sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    const index = cards.indexOf(visible.target) + 1;
+    el('currentMeta').textContent = `${index}/${cards.length}`;
+  }, { root: el('quizScroll'), threshold:[0.35, 0.55, 0.75], rootMargin:'-8px 0px -45% 0px' });
+  cards.forEach(card => currentQuestionObserver.observe(card));
+}
+
 function clearCardVisual(card) {
   card.querySelectorAll('.option').forEach(o => o.classList.remove('correct','wrong'));
   const result = card.querySelector('.result');
@@ -297,11 +328,15 @@ function updateStats() {
     const selected = card.querySelector('input[type="radio"]:checked')?.value;
     if (selected) { answered++; if (selected === card.dataset.correct) correct++; else wrong++; }
   });
-  el('visibleCount').textContent = document.querySelectorAll('.question-card').length;
+  const visibleCards = document.querySelectorAll('.question-card').length;
+  el('visibleCount').textContent = visibleCards;
   el('answeredCount').textContent = answered;
   el('correctCount').textContent = correct;
   el('wrongCount').textContent = wrong;
   el('totalMeta').textContent = questions.length;
+  el('visibleMeta').textContent = visibleCards;
+  el('scoreMeta').textContent = `${correct}/${answered || 0}`;
+  if (!visibleCards) el('currentMeta').textContent = `0/${questions.length}`;
 }
 function loadRows(rows) {
   const normalized = rows.map(normalizeQuestion).filter(q => q.question);
