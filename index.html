@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Məhkəmə Təbabəti — All Questions Quiz</title>
+  <title>Vugun_quizleri</title>
   <style>
 :root {
   --bg: #f5f7fb;
@@ -68,18 +68,22 @@ main { max-width: 1180px; margin: 20px auto 60px; padding: 0 20px; }
   .answer { display: block; }
 }
 
+.edit-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; border: 2px solid var(--accent); border-radius: 10px; padding: 10px 12px; background: var(--soft); color: var(--accent); font-size: 14px; font-weight: 900; white-space: nowrap; cursor: pointer; }
+.edit-toggle input { width: 16px; height: 16px; }
+body.edit-mode .edit-toggle { background: var(--accent); color: white; }
 .file-upload { display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; color: var(--text); font-size: 14px; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .file-upload input { display: none; }
 .excel-status { grid-column: 1 / -1; color: var(--muted); font-size: 12px; min-height: 16px; }
 .mobile-panel-btn { display: none; margin-top: 10px; padding: 8px 10px; }
-.card-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.card-tools { display: none; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+body.edit-mode .card-tools { display: flex; }
 .card-tools label { color: var(--muted); font-size: 12px; font-weight: 700; }
 .card-tools select { width: auto; min-width: 220px; padding: 8px 10px; font-size: 13px; }
 .badges { display: none; }
 body.show-sources .badges { display: flex; }
 body.show-sources .question-top { align-items: flex-start; }
 .answer-edit-note { color: var(--muted); font-size: 12px; }
-.controls { grid-template-columns: minmax(190px, 1fr) minmax(160px, 220px) repeat(7, auto); }
+.controls { grid-template-columns: minmax(190px, 1fr) minmax(160px, 220px) repeat(8, auto); }
 @media (max-width: 980px) {
   .controls { grid-template-columns: 1fr 1fr; padding-bottom: 10px; margin-top: 8px; }
   .controls > * { min-width: 0; }
@@ -106,6 +110,84 @@ body.show-sources .question-top { align-items: flex-start; }
   .card-tools select { width: 100%; min-width: 0; }
 }
 
+
+/* Compact top panel refresh */
+header { box-shadow: 0 1px 8px rgba(16, 24, 40, .04); }
+.header-inner { padding: 9px 20px 7px; }
+h1 { font-size: 19px; line-height: 1.2; margin: 0 0 4px; }
+.meta { gap: 6px; font-size: 12px; align-items: center; }
+.meta span { line-height: 1.2; }
+.controls { margin: 6px auto 0; padding: 0 20px 8px; gap: 6px; grid-template-columns: minmax(190px, 1fr) minmax(140px, 190px) repeat(8, max-content); }
+.controls input[type="search"], .controls select { height: 34px; padding: 7px 10px; font-size: 13px; border-radius: 9px; }
+.controls button, .instant-toggle, .edit-toggle, .file-upload { min-height: 34px; padding: 7px 10px; font-size: 12.5px; border-radius: 9px; line-height: 1.1; }
+.instant-toggle, .edit-toggle, .file-upload { gap: 6px; }
+.instant-toggle input, .edit-toggle input { width: 14px; height: 14px; }
+.excel-status { font-size: 11px; min-height: 13px; margin-top: -2px; line-height: 1.15; }
+.mobile-panel-btn { min-height: 30px; padding: 6px 9px; font-size: 12px; }
+main { margin-top: 12px; }
+
+@media (max-width: 1100px) {
+  .controls { grid-template-columns: 1fr 1fr 1fr; }
+  .controls > button, .controls > label { justify-content: center; }
+}
+@media (max-width: 780px) {
+  header { max-height: 52vh; }
+  .header-inner { padding: 7px 10px 6px; display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; }
+  h1 { font-size: 15px; margin: 0; }
+  .meta { grid-column: 1 / -1; font-size: 10.5px; gap: 5px; }
+  .mobile-panel-btn { display: inline-flex; margin: 0; align-items: center; justify-content: center; white-space: nowrap; }
+  .controls { grid-template-columns: 1fr 1fr; padding: 0 10px 8px; gap: 5px; margin-top: 2px; }
+  .controls input[type="search"], .controls select { grid-column: 1 / -1; height: 32px; padding: 6px 9px; font-size: 12px; }
+  .controls button, .instant-toggle, .edit-toggle, .file-upload { min-height: 31px; padding: 6px 8px; font-size: 11.5px; border-radius: 8px; }
+  .excel-status { grid-column: 1 / -1; font-size: 10.5px; min-height: 0; }
+  main { margin-top: 8px; }
+}
+@media (max-width: 430px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+  .controls button, .instant-toggle, .edit-toggle, .file-upload { font-size: 11px; padding: 6px; }
+  .controls button:nth-last-of-type(1) { grid-column: auto; }
+  .excel-status { display: none; }
+}
+
+
+/* Desktop no-overflow compact controls */
+html, body { max-width: 100%; overflow-x: hidden; }
+.controls {
+  width: 100%;
+  max-width: 1180px;
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.controls > * { min-width: 0; }
+#search { flex: 1 1 230px; min-width: 170px; }
+#sourceFilter { flex: 0 1 150px; min-width: 120px; }
+.controls button, .instant-toggle, .edit-toggle, .file-upload {
+  flex: 0 1 auto;
+  min-height: 30px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  border-radius: 8px;
+  max-width: 100%;
+}
+.instant-toggle, .edit-toggle, .file-upload { gap: 4px; white-space: nowrap; }
+.instant-toggle input, .edit-toggle input { width: 13px; height: 13px; }
+.excel-status { flex: 1 0 100%; font-size: 10.5px; min-height: 10px; }
+@media (min-width: 781px) {
+  .header-inner, .controls, main { max-width: 100%; }
+  .header-inner { padding-left: 12px; padding-right: 12px; }
+  .meta-long { display: none; }
+}
+@media (min-width: 1200px) {
+  .header-inner, .controls, main { max-width: 1180px; }
+}
+@media (max-width: 780px) {
+  .controls { display: grid !important; }
+}
+
 </style>
 </head>
 <body>
@@ -115,32 +197,36 @@ body.show-sources .question-top { align-items: flex-start; }
     <div class="meta">
       <span>Ümumi sual: <strong id="totalCountMeta">348</strong></span>
       <span id="sheetMeta">Source: All Questions sheet</span>
-      <span class="meta-long">Excel yükləmə, cavab redaktəsi, mənbə toggle və variant qarışdırma aktivdir</span>
+      <span class="meta-long">Excel import, cavab redaktəsi, mənbə toggle və variant qarışdırma aktivdir</span>
     </div>
-    <button class="ghost mobile-panel-btn" id="mobilePanelBtn" type="button" onclick="toggleMobilePanel()">Paneli gizlət</button>
+    <button class="ghost mobile-panel-btn" id="mobilePanelBtn" type="button" onclick="toggleMobilePanel()">Panel</button>
   </div>
   <div class="controls" id="controlsPanel">
-    <input type="search" id="search" placeholder="Sualda və ya variantlarda axtar...">
+    <input type="search" id="search" placeholder="Axtar...">
     <select id="sourceFilter">
       <option value="">Bütün mənbələr</option>
     </select>
+    <label class="edit-toggle" title="Aktiv olduqda hər sualın altında düzgün cavabı dəyişmək bölməsi açılır">
+      <input type="checkbox" id="editModeToggle">
+      ✏️ Edit
+    </label>
     <label class="file-upload" title="Excel/CSV faylı yüklə və mövcud sual bazasını əvəz et">
       <input type="file" id="excelInput" accept=".xlsx,.xls,.csv">
-      Excel yüklə
+      Excel
     </label>
     <label class="instant-toggle" title="Aktiv olduqda cavabı seçən kimi düzgün cavab göstərilir">
       <input type="checkbox" id="instantMode">
-      Seçən kimi göstər
+      Dərhal
     </label>
     <label class="instant-toggle" title="Aktiv etdikdə hər sualın PDF/səhifə mənbəsi görünür">
       <input type="checkbox" id="sourceToggle">
-      Mənbəni göstər
+      Mənbə
     </label>
-    <button class="ghost" type="button" onclick="shuffleOptions()">Variantları qarışdır</button>
-    <button type="button" onclick="checkAnswers()">Cavabları yoxla</button>
-    <button class="ghost" type="button" onclick="toggleAnswers()">Cavabları göstər/gizlət</button>
-    <button class="secondary" type="button" onclick="resetQuiz()">Sıfırla</button>
-    <div class="excel-status" id="excelStatus"></div>
+    <button class="ghost" type="button" onclick="shuffleOptions()">Qarışdır</button>
+    <button type="button" onclick="checkAnswers()">Yoxla</button>
+    <button class="ghost" type="button" onclick="toggleAnswers()">Cavab</button>
+    <button class="secondary" type="button" onclick="resetQuiz()">Reset</button>
+    <div class="excel-status" id="excelStatus">Edit rejimi bağlıdır — düzgün cavabı dəyişmək seçimi gizlidir.</div>
   </div>
 </header>
 <main>
@@ -9897,7 +9983,7 @@ body.show-sources .question-top { align-items: flex-start; }
       <div class="answer">Düzgün cavab: <strong>E) bütün cavablar düzdür</strong></div>
     </section>
   </div>
-  <p class="footer-note">Qeyd: Suallar məcburi deyil. İstədiyin sualları cavablandırıb “Cavabları yoxla” düyməsinə basa bilərsən.</p>
+  <p class="footer-note">Qeyd: Suallar məcburi deyil. İstədiyin sualları cavablandırıb “Yoxla” düyməsinə basa bilərsən.</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -9905,12 +9991,14 @@ const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 let questionsData = [];
 let answersVisible = false;
 let sourcesVisible = false;
+let editMode = false;
 
 const questionContainer = document.getElementById('questions');
 const search = document.getElementById('search');
 const sourceFilter = document.getElementById('sourceFilter');
 const instantMode = document.getElementById('instantMode');
 const sourceToggle = document.getElementById('sourceToggle');
+const editModeToggle = document.getElementById('editModeToggle');
 const excelInput = document.getElementById('excelInput');
 const excelStatus = document.getElementById('excelStatus');
 
@@ -10020,6 +10108,7 @@ function renderQuestions() {
   updateCounts();
   applyFilters();
   document.body.classList.toggle('show-sources', sourcesVisible);
+  document.body.classList.toggle('edit-mode', editMode);
 }
 
 function bindQuestionEvents() {
@@ -10078,6 +10167,12 @@ sourceFilter.addEventListener('change', applyFilters);
 sourceToggle.addEventListener('change', () => {
   sourcesVisible = sourceToggle.checked;
   document.body.classList.toggle('show-sources', sourcesVisible);
+});
+editModeToggle.addEventListener('change', () => {
+  editMode = editModeToggle.checked;
+  document.body.classList.toggle('edit-mode', editMode);
+  const status = document.getElementById('excelStatus');
+  if (status) status.textContent = editMode ? 'Edit rejimi aktivdir — indi düzgün cavabları dəyişə bilərsən.' : 'Edit rejimi bağlıdır — düzgün cavabı dəyişmək seçimi gizlidir.';
 });
 
 function evaluateCard(card, revealAnswer = true) {
@@ -10159,7 +10254,7 @@ function toggleMobilePanel() {
   const header = document.querySelector('header');
   const btn = document.getElementById('mobilePanelBtn');
   const collapsed = header.classList.toggle('panel-collapsed');
-  btn.textContent = collapsed ? 'Paneli göstər' : 'Paneli gizlət';
+  btn.textContent = collapsed ? 'Paneli göstər' : 'Panel';
 }
 
 function parseCorrectValue(value, options) {
