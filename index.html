@@ -120,6 +120,7 @@ body.edit-mode .edit-tools { display:flex; }
       <select class="source hide-mobile" id="sourceFilter"><option value="">Bütün mənbələr</option></select>
       <button class="ghost mobile-panel-btn" id="panelBtn" type="button">Panel</button>
       <label class="toggle edit hide-mobile" id="editToggleLabel" title="Aktiv olduqda düzgün cavabı dəyişmək mümkün olur"><input type="checkbox" id="editMode"> Edit</label>
+      <button class="ghost hide-mobile" type="button" id="clearEditsBtn" title="Yadda saxlanmış cavab düzəlişlərini sil">Düzəlişləri sil</button>
       <label class="file-btn hide-mobile" for="excelFile" title="Excel və ya CSV yüklə">Excel</label>
       <input class="file-input" type="file" id="excelFile" accept=".xlsx,.xls,.csv">
       <label class="toggle hide-mobile" title="Cavabı seçən kimi düzgün cavab göstərilsin"><input type="checkbox" id="instantMode"> Dərhal</label>
@@ -151,6 +152,44 @@ let optionOrder = {};
 let currentQuestionObserver = null;
 const letters = ['A','B','C','D','E'];
 const el = id => document.getElementById(id);
+const CORRECTION_STORAGE_KEY = 'fizio_quiz_correct_overrides_v1';
+
+function correctionKey(q) {
+  return `${q.id}::${String(q.question || '').trim().slice(0, 140)}`;
+}
+function readSavedCorrections() {
+  try { return JSON.parse(localStorage.getItem(CORRECTION_STORAGE_KEY) || '{}') || {}; }
+  catch { return {}; }
+}
+function writeSavedCorrections(data) {
+  try { localStorage.setItem(CORRECTION_STORAGE_KEY, JSON.stringify(data)); return true; }
+  catch { return false; }
+}
+function applySavedCorrections() {
+  const saved = readSavedCorrections();
+  let applied = 0;
+  questions.forEach(q => {
+    const val = saved[correctionKey(q)];
+    if (letters.includes(val)) { q.correct = val; applied++; }
+  });
+  if (applied) el('uploadStatus').textContent = `${applied} yadda saxlanmış düzəliş tətbiq olundu`;
+}
+function saveCorrectChange(q) {
+  const saved = readSavedCorrections();
+  saved[correctionKey(q)] = q.correct;
+  const ok = writeSavedCorrections(saved);
+  el('uploadStatus').textContent = ok ? 'Düzəliş yadda saxlandı' : 'Düzəliş yadda saxlanmadı';
+}
+function clearSavedCorrections() {
+  if (!confirm('Yadda saxlanmış düzgün cavab düzəlişləri silinsin?')) return;
+  try { localStorage.removeItem(CORRECTION_STORAGE_KEY); } catch {}
+  questions = structuredClone(INITIAL_QUESTIONS);
+  optionOrder = {};
+  resetFilters();
+  renderSources();
+  renderQuestions();
+  el('uploadStatus').textContent = 'Yadda saxlanmış düzəlişlər silindi';
+}
 
 function normalizeQuestion(raw, index) {
   const get = (...names) => {
@@ -246,6 +285,7 @@ function bindQuestionEvents() {
       const q = questions.find(x => String(x.id) === String(e.target.dataset.id));
       if (!q) return;
       q.correct = e.target.value;
+      saveCorrectChange(q);
       const card = document.querySelector(`.question-card[data-id="${q.id}"]`);
       if (card) {
         card.dataset.correct = q.correct;
@@ -342,6 +382,7 @@ function loadRows(rows) {
   const normalized = rows.map(normalizeQuestion).filter(q => q.question);
   if (!normalized.length) { alert('Faylda sual tapılmadı. Header-lər: No, Question, A, B, C, D, E, CorrectLetter, CorrectAnswer, SourceFile, Page olmalıdır.'); return; }
   questions = normalized;
+  applySavedCorrections();
   optionOrder = {};
   el('uploadStatus').textContent = `${questions.length} sual yükləndi`;
   resetFilters(); renderSources(); renderQuestions();
@@ -369,12 +410,14 @@ function handleFile(file) {
   if (file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file); else reader.readAsArrayBuffer(file);
 }
 function init() {
+  applySavedCorrections();
   renderSources(); renderQuestions();
   el('search').addEventListener('input', renderQuestions);
   el('sourceFilter').addEventListener('change', renderQuestions);
   el('checkBtn').addEventListener('click', checkAnswers);
   el('answersBtn').addEventListener('click', toggleAnswers);
   el('resetBtn').addEventListener('click', resetQuiz);
+  el('clearEditsBtn').addEventListener('click', clearSavedCorrections);
   el('shuffleBtn').addEventListener('click', shuffleOptions);
   el('excelFile').addEventListener('change', e => handleFile(e.target.files[0]));
   el('sourceMode').addEventListener('change', e => document.body.classList.toggle('show-sources', e.target.checked));
